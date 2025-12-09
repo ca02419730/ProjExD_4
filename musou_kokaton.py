@@ -47,6 +47,9 @@ class Bird(pg.sprite.Sprite):
         pg.K_LEFT: (-1, 0),
         pg.K_RIGHT: (+1, 0),
     }
+    
+    state = "null"  # 状態の変数
+    hyper_life = "null"  # 発動時間の変数
 
     def __init__(self, num: int, xy: tuple[int, int]):
         """
@@ -99,6 +102,15 @@ class Bird(pg.sprite.Sprite):
         if not (sum_mv[0] == 0 and sum_mv[1] == 0):
             self.dire = tuple(sum_mv)
             self.image = self.imgs[self.dire]
+        if self.state == "hyper":  # ハイパーモード中の処理
+            self.hyper_life -= 1  # 持続時間を減算
+            self.image = pg.transform.laplacian(self.image)  # ハイパーモードのエフェクト
+            screen.blit(self.image, self.rect)
+            if self.hyper_life < 0:  # 持続時間が0になったら
+                self.state = "normal"  # ハイパーモード終了
+                self.hyper_life = "normal"  # 持続時間リセット
+                self.image = self.imgs[self.dire]  # 通常モードの画像に戻す
+                screen.blit(self.image, self.rect)  # こうかとんを画面に転送
         screen.blit(self.image, self.rect)
 
 
@@ -232,7 +244,7 @@ class Score:
     def __init__(self):
         self.font = pg.font.Font(None, 50)
         self.color = (0, 0, 255)
-        self.value = 0
+        self.value = 1000
         self.image = self.font.render(f"Score: {self.value}", 0, self.color)
         self.rect = self.image.get_rect()
         self.rect.center = 100, HEIGHT-50
@@ -283,13 +295,24 @@ def main():
             score.value += 1  # 1点アップ
 
         for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
+            if bird.state == "hyper":
+                exps.add(Explosion(bomb, 50))  # 爆発エフェクト
+                score.value += 1  # 1点アップ
+                continue  # ハイパーモード中は無敵
             bird.change_img(8, screen)  # こうかとん悲しみエフェクト
             score.update(screen)
             pg.display.update()
             time.sleep(2)
             return
-
-        bird.update(key_lst, screen)
+        if event.type == pg.KEYDOWN and event.key == pg.K_RSHIFT and score.value >= 100:  # 右シフトキーが押下され，スコアが100以上の場合
+            if bird.state == "hyper":
+                continue  # すでにハイパーモード中なら何もしない
+            bird.state ="hyper"  # ハイパーモードに移行
+            score.value -= 100  # スコアを100ずつ減少
+            bird.hyper_life = 500  # ハイパーモードの持続時間(500フレーム)
+            bird.update(key_lst, screen)
+        else:
+            bird.update(key_lst, screen)
         beams.update()
         beams.draw(screen)
         emys.update()
