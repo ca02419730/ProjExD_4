@@ -265,7 +265,7 @@ def main():
                 beams.add(Beam(bird))
             if event.type == pg.KEYDOWN and event.key == pg.K_LSHIFT:
                 bird.speed = 20
-            else:
+            elif event.type == pg.KEYUP and event.key == pg.K_LSHIFT:
                 bird.speed = 10
         screen.blit(bg_img, [0, 0])
 
